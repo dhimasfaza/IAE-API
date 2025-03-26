@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test API FastAPI</title>
+</head>
+<body>
+    <h2>Hasil dari API:</h2>
+    <pre id="result"></pre>
+
+    <script>
+        fetch('http://127.0.0.1:8000/')
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('result').textContent = JSON.stringify(data, null, 2);
+        })
+        .catch(error => console.error('Error:', error));
+    </script>
+</body>
+</html>
