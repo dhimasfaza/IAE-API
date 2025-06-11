@@ -11,9 +11,11 @@ def init_db():
     conn = get_db()
     conn.execute("""
     CREATE TABLE IF NOT EXISTS members (
-        id INTEGER PRIMARY KEY,
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
         phone_number TEXT
     )
     """)
     conn.commit()
+    conn.close()
+    print("Database initialized successfully!")

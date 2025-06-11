@@ -14,7 +14,8 @@ def init_db():
         id INTEGER PRIMARY KEY,
         title TEXT NOT NULL,
         author TEXT,
-        year INTEGER
+        year INTEGER,
+        jumlah INTEGER
     )
     """)
     conn.commit()

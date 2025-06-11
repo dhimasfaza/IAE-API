@@ -1,0 +1,31 @@
+type Member {
+    id: ID!
+    name: String!
+    phone_number: String
+    borrowings: [Loan!]!
+}
+
+type Loan {
+    id: ID!
+    book_id: Int!
+    tanggal_peminjaman: String
+    tanggal_jatuh_tempo: String
+    tanggal_pengembalian: String
+    status: String
+    denda: Int
+}
+
+type Query {
+    members: [Member!]!
+    member(id: ID!): Member
+}
+
+type Mutation {
+    registerMember(name: String!, phone: String!): Member!
+    updateMember(id: ID!, name: String, phone: String): Member!
+}
+
+schema {
+    query: Query
+    mutation: Mutation
+}

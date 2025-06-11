@@ -1,19 +1,19 @@
 services:
   user_service:
     build: ./user_service
-    ports: ["5001:5000"]
+    ports: ["5000:5000"]
 
   book_service:
     build: ./book_service
-    ports: ["5002:5000"]
+    ports: ["5001:5001"]
 
   borrowing_service:
     build: ./borrowing_service
-    ports: ["5003:5000"]
+    ports: ["5002:5002"]
 
   review_service:
     build: ./review_service
-    ports: ["5004:5000"]
+    ports: ["5003:5003"]
 
   graphql_gateway:
     build: ./graphql_gateway
@@ -21,8 +21,8 @@ services:
 
   auth_service:
     build: ./auth_service
-    ports: ["5005:5000"]
+    ports: ["5004:5004"]
 
   payment_service:
     build: ./payment_service
-    ports: ["5006:5000"]
+    ports: ["5005:5005"]

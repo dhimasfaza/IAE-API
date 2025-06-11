@@ -1,14 +1,20 @@
-type Query {
-  reviews(bookId: Int): [Review!]!
-  topBooks(limit: Int): [Book]
-}
-type Mutation {
-  addReview(memberId: Int!, bookId: Int!, rating: Int!, comment: String!): Review
-}
 type Review {
   id: ID!
-  book_id: Int!
-  member_id: Int!
+  member_id: ID!
+  book_id: ID!
   rating: Int!
   comment: String
+}
+
+type Query {
+  reviews(bookId: ID): [Review!]!
+}
+
+type Mutation {
+  addReview(memberId: ID!, bookId: ID!, rating: Int!, comment: String): Review!
+}
+
+schema {
+  query: Query
+  mutation: Mutation
 }
