@@ -15,7 +15,8 @@ logger = logging.getLogger(__name__)
 app = FastAPI(title="Library Loan System", version="1.0.0")
 
 # Book service URL - change this to match your book service port
-BOOK_SERVICE_URL = "http://localhost:5001"  # Book service port
+BOOK_SERVICE_URL = "http://book_service:5001"  # Book service port
+USER_SERVICE_URL = "http://user_service:5000"
 
 # Initialize resolvers
 query = QueryType()
@@ -43,6 +44,19 @@ def resolve_borrowings(_, info):
         rows = conn.execute("SELECT * FROM loans").fetchall()
         return [dict(r) for r in rows]
 
+@query.field("topBorrowedBooks")
+def resolve_top_borrowed_books(_, info):
+    conn = get_db()
+    rows = conn.execute('''
+        SELECT book_id, COUNT(*) as total_peminjaman
+        FROM loans
+        GROUP BY book_id
+        ORDER BY total_peminjaman DESC
+        LIMIT 5
+    ''').fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
 @mutation.field("borrowBook")
 def borrow_book(_, info, memberId, bookId, tanggal_peminjaman):
     # Cek apakah book service berjalan
@@ -52,11 +66,28 @@ def borrow_book(_, info, memberId, bookId, tanggal_peminjaman):
     # Cek stok buku di book_service
     try:
         logger.info(f"Memeriksa stok buku ID: {bookId}")
-        resp = requests.get(f"{BOOK_SERVICE_URL}/books/{bookId}/stok", timeout=5)
+        query = """
+            query GetBook($id: ID!) {
+                book(id: $id) {
+                    id
+                    jumlah
+                }
+            }
+        """
+        variables = {"id": bookId}
+        resp = requests.post(
+            f"{BOOK_SERVICE_URL}/graphql",
+            json={"query": query, "variables": variables},
+            timeout=5
+        )
         if resp.status_code != 200:
             raise Exception(f"Error dari book service: {resp.status_code}")
-        
-        stok = resp.json().get("jumlah", 0)
+
+        data = resp.json()
+        book = data.get("data", {}).get("book")
+        if not book:
+            raise Exception("Buku tidak ditemukan di book service.")
+        stok = book.get("jumlah", 0)
         if stok < 1:
             raise Exception("Stok buku habis, tidak bisa dipinjam.")
         
@@ -67,12 +98,8 @@ def borrow_book(_, info, memberId, bookId, tanggal_peminjaman):
 
     with get_db_connection() as conn:
         cur = conn.cursor()
-        cur.execute("SELECT COUNT(*) FROM loans WHERE book_id = ? AND status = 'dipinjam'", (bookId,))
-        if cur.fetchone()[0] > 0:
-            raise Exception("Buku sedang dipinjam, tidak bisa dipinjam lagi.")
-
         tanggal_peminjaman_dt = datetime.strptime(tanggal_peminjaman, "%Y-%m-%d")
-        tanggal_jatuh_tempo_dt = tanggal_peminjaman_dt + timedelta(days=7)
+        tanggal_jatuh_tempo_dt = tanggal_peminjaman_dt + timedelta(days=2)
         tanggal_jatuh_tempo = tanggal_jatuh_tempo_dt.strftime("%Y-%m-%d")
         
         try:
@@ -80,12 +107,31 @@ def borrow_book(_, info, memberId, bookId, tanggal_peminjaman):
                         (memberId, bookId, tanggal_peminjaman, tanggal_jatuh_tempo, "dipinjam", 0))
             conn.commit()
             
-            # Kurangi stok buku di book_service
+            # Kurangi stok buku di book_service via GraphQL
             logger.info(f"Mengurangi stok buku ID: {bookId}")
-            resp = requests.post(f"{BOOK_SERVICE_URL}/books/{bookId}/kurangi_stok", timeout=5)
+            mutation = """
+            mutation UpdateStok($bookId: ID!, $jumlah: Int!) {
+                updateStok(bookId: $bookId, jumlah: $jumlah) {
+                    id
+                    title
+                    jumlah
+                }
+            }
+            """
+            new_stok = stok - 1
+            resp = requests.post(
+                f"{BOOK_SERVICE_URL}/graphql",
+                json={"query": mutation, "variables": {"bookId": bookId, "jumlah": new_stok}},
+                timeout=5
+            )
             if resp.status_code != 200:
                 conn.rollback()
                 raise Exception(f"Error saat mengurangi stok: {resp.status_code}")
+
+            data = resp.json()
+            if "errors" in data:
+                conn.rollback()
+                raise Exception(f"Error dari book service: {data['errors']}")
                 
             return {
                 "id": cur.lastrowid,
@@ -121,22 +167,54 @@ def resolve_return_book(_, info, loanId):
                     (tanggal_pengembalian.strftime("%Y-%m-%d"), denda, loanId))
         conn.commit()
 
-        # Update stok buku di book_service
+        # Update stok buku di book_service via GraphQL
         try:
-            resp = requests.get(f"{BOOK_SERVICE_URL}/books/{row['book_id']}/stok", timeout=5)
-            stok_lama = resp.json().get("jumlah", 0) if resp.status_code == 200 else 0
-            
-            requests.post(f"{BOOK_SERVICE_URL}/graphql", json={
-                "query": """
-                    mutation UpdateStok($bookId: ID!, $jumlah: Int!) {
-                        updateStok(bookId: $bookId, jumlah: $jumlah)
-                        { id title jumlah }
-                    }
-                """,
-                "variables": {"bookId": row["book_id"], "jumlah": stok_lama + 1}
-            }, timeout=5)
+            # Ambil stok lama via GraphQL
+            query = """
+            query GetBook($id: ID!) {
+                book(id: $id) {
+                    id
+                    jumlah
+                }
+            }
+            """
+            variables = {"id": row["book_id"]}
+            resp = requests.post(
+                f"{BOOK_SERVICE_URL}/graphql",
+                json={"query": query, "variables": variables},
+                timeout=5
+            )
+            if resp.status_code != 200:
+                raise Exception(f"Error mengambil stok lama: {resp.status_code}")
+            data = resp.json()
+            book = data.get("data", {}).get("book")
+            if not book:
+                raise Exception("Buku tidak ditemukan di book service.")
+            stok_lama = book.get("jumlah", 0)
+
+            # Update stok (tambah 1)
+            mutation = """
+            mutation UpdateStok($bookId: ID!, $jumlah: Int!) {
+                updateStok(bookId: $bookId, jumlah: $jumlah) {
+                    id
+                    title
+                    jumlah
+                }
+            }
+            """
+            resp = requests.post(
+                f"{BOOK_SERVICE_URL}/graphql",
+                json={"query": mutation, "variables": {"bookId": row["book_id"], "jumlah": stok_lama + 1}},
+                timeout=5
+            )
+            if resp.status_code != 200:
+                conn.rollback()
+                raise Exception(f"Error updating book stock: {resp.status_code}")
+            data = resp.json()
+            if "errors" in data:
+                conn.rollback()
+                raise Exception(f"Error dari book service: {data['errors']}")
         except requests.RequestException as e:
-            # Rollback if book service update fails
             conn.rollback()
             raise Exception(f"Error updating book stock: {str(e)}")
 

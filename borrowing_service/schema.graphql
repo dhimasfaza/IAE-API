@@ -1,5 +1,6 @@
 type Query {
   borrowings: [Loan!]!
+  topBorrowedBooks: [TopBorrowedBook!]!
 }
 
 type Mutation {
@@ -16,4 +17,9 @@ type Loan {
   tanggal_pengembalian: String
   status: String
   denda: Int
+}
+
+type TopBorrowedBook {
+  book_id: Int!
+  total_peminjaman: Int!
 }

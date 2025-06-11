@@ -8,6 +8,13 @@ import requests
 query = QueryType()
 mutation = MutationType()
 
+@query.field("books")
+def resolve_books(_, info):
+    conn = get_db()
+    rows = conn.execute("SELECT * FROM books").fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
+
 @query.field("book")
 def resolve_book(_, info, id):
     conn = get_db()
@@ -54,6 +61,11 @@ app.mount("/graphql", GraphQL(schema, debug=True))
 def read_root():
     return {"message": "GraphQL API is running", "graphql_endpoint": "/graphql"}
 
+@app.get("/health")
+def health_check():
+    return {"status": "healthy"}
+
+
 # Initialize database on startup
 @app.on_event("startup")
 def startup():
@@ -63,4 +75,4 @@ def startup():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="127.0.0.1", port=5001)
+    uvicorn.run(app, host="0.0.0.0", port=5001)

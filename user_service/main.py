@@ -60,7 +60,7 @@ member = ObjectType("Member")
 @member.field("borrowings")
 def resolve_borrowings_for_member(obj, info):
     member_id = obj["id"]
-    resp = requests.get(f"http://localhost:5002/borrowings?member_id={member_id}")
+    resp = requests.get(f"http://borrowing_service:5002/borrowings?member_id={member_id}")
     if resp.status_code == 200:
         return resp.json()
     return []
@@ -93,3 +93,8 @@ app.mount("/graphql", GraphQL(schema, debug=True))
 def startup():
     init_db()
     print("GraphQL endpoint available at: http://127.0.0.1:5000/graphql")
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=5000)

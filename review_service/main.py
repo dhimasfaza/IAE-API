@@ -19,9 +19,9 @@ def resolve_reviews(_, info, bookId=None):
 @mutation.field("addReview")
 def add_review(_, info, memberId, bookId, rating, comment):
     # Cek ke borrowing_service apakah member sudah meminjam buku ini
-    resp = requests.get(f"http://localhost:5002/loans/check?member_id={memberId}&book_id={bookId}")
+    resp = requests.get(f"http://borrowing_service:5002/loans/check?member_id={memberId}&book_id={bookId}")
     if resp.status_code != 200 or not resp.json().get("boleh_review", False):
-        raise Exception("Member hanya bisa mereview buku yang sudah pernah dipinjam.")
+        raise Exception("Member hanya bisa mereview buku yang sudah pernah dipinjam dan dikembalikan.")
     # Lanjutkan proses insert review
     conn = get_db()
     cur = conn.cursor()
@@ -43,4 +43,4 @@ def startup():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="127.0.0.1", port=5003)
+    uvicorn.run(app, host="0.0.0.0", port=5003)

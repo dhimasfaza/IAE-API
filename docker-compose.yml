@@ -10,6 +10,10 @@ services:
   borrowing_service:
     build: ./borrowing_service
     ports: ["5002:5002"]
+    depends_on:
+      - book_service
+      - user_service
+
 
   review_service:
     build: ./review_service
