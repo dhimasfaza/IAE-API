@@ -6,6 +6,7 @@ type Query {
 type Mutation {
   borrowBook(memberId: Int!, bookId: Int!, tanggal_peminjaman: String!): Loan!
   returnBook(loanId: Int!): Loan!
+  bayarDenda(paymentId: ID!): PaymentResponse!
 }
 
 type Loan {
@@ -17,6 +18,21 @@ type Loan {
   tanggal_pengembalian: String
   status: String
   denda: Int
+  payment_info: PaymentResponse
+}
+
+type PaymentInfo {
+  payment_id: Int!
+  payment_status: String!
+  payment_url: String!
+}
+
+type PaymentResponse {
+  orderId: String!
+  bookId: String!
+  customerId: String!
+  token: String!
+  redirect_url: String!
 }
 
 type TopBorrowedBook {

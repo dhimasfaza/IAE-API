@@ -17,6 +17,8 @@ app = FastAPI(title="Library Loan System", version="1.0.0")
 # Book service URL - change this to match your book service port
 BOOK_SERVICE_URL = "http://book_service:5001"  # Book service port
 USER_SERVICE_URL = "http://user_service:5000"
+PAYMENT_SERVICE_URL = "http://payment_service:9210"
+
 
 # Initialize resolvers
 query = QueryType()
@@ -222,6 +224,60 @@ def resolve_return_book(_, info, loanId):
         cur.execute("SELECT * FROM loans WHERE id = ?", (loanId,))
         updated_row = cur.fetchone()
         return dict(updated_row)
+    
+@mutation.field("bayarDenda")
+def resolve_bayar_denda(_, info, paymentId):
+    with get_db_connection() as conn:
+        cur = conn.cursor()
+
+        # Ambil data pinjaman
+        cur.execute("SELECT * FROM loans WHERE id = ?", (paymentId,))
+        row = cur.fetchone()
+        if not row:
+            raise Exception("Loan tidak ditemukan")
+
+        loan = dict(row)
+        if loan["denda"] == 0:
+            raise Exception("Tidak ada denda untuk pinjaman ini")
+
+        # Kirim request ke payment service (GraphQL)
+        try:
+            mutation = """
+            mutation CreatePayment($amount: Int!, $bookId: String!, $customerId: String!) {
+              createPayment(amount: $amount, bookId: $bookId, customerId: $customerId) {
+                orderId
+                bookId
+                customerId
+                token
+                redirect_url
+              }
+            }
+            """
+            variables = {
+                "amount": loan["denda"],
+                "bookId": str(loan["book_id"]),
+                "customerId": str(loan["member_id"])
+            }
+
+            resp = requests.post(
+                f"{PAYMENT_SERVICE_URL}/graphql",
+                json={"query": mutation, "variables": variables},
+                timeout=5
+            )
+
+            if resp.status_code != 200:
+                raise Exception(f"Payment service error: {resp.status_code}")
+
+            data = resp.json()
+            if "errors" in data:
+                raise Exception(f"Error dari payment service: {data['errors']}")
+
+            payment_info = data["data"]["createPayment"]
+            return payment_info
+
+        except requests.RequestException as e:
+            logger.error(f"Error saat membuat pembayaran: {str(e)}")
+            raise Exception("Gagal menghubungi payment service")
 
 # Create GraphQL schema
 schema = make_executable_schema(load_schema_from_path("schema.graphql"), [query, mutation])
@@ -287,6 +343,68 @@ def get_borrowings_by_member(member_id: int):
     conn.close()
     # Ubah hasil ke list of dict agar bisa di-serialize ke JSON
     return [dict(r) for r in rows]
+
+@app.get("/loans/{loan_id}/payment-status")
+def get_payment_status(loan_id: int):
+    """Endpoint untuk mengecek status pembayaran denda"""
+    with get_db_connection() as conn:
+        # Ambil data loan
+        row = conn.execute("SELECT * FROM loans WHERE id = ?", (loan_id,)).fetchone()
+        if not row:
+            return {"error": "Loan tidak ditemukan"}
+        
+        loan_data = dict(row)
+        
+        # Jika tidak ada denda, return status
+        if loan_data.get("denda", 0) == 0:
+            return {
+                "loan_id": loan_id,
+                "denda": 0,
+                "payment_required": False,
+                "message": "Tidak ada denda untuk loan ini"
+            }
+        
+        # Cek status pembayaran di payment service
+        try:
+            resp = requests.get(
+                f"{PAYMENT_SERVICE_URL}/payments/by-member/{loan_data['member_id']}",
+                timeout=5
+            )
+            if resp.status_code == 200:
+                payments = resp.json()
+                # Cari payment yang terkait dengan loan ini
+                related_payment = None
+                for payment in payments:
+                    if f"Loan ID: {loan_id}" in payment.get("description", ""):
+                        related_payment = payment
+                        break
+                
+                if related_payment:
+                    return {
+                        "loan_id": loan_id,
+                        "denda": loan_data["denda"],
+                        "payment_required": True,
+                        "payment_id": related_payment["id"],
+                        "payment_status": related_payment["status"],
+                        "payment_url": f"{PAYMENT_SERVICE_URL}/payments/{related_payment['id']}"
+                    }
+            
+            return {
+                "loan_id": loan_id,
+                "denda": loan_data["denda"],
+                "payment_required": True,
+                "payment_status": "not_found",
+                "message": "Payment record tidak ditemukan"
+            }
+            
+        except requests.RequestException as e:
+            return {
+                "loan_id": loan_id,
+                "denda": loan_data["denda"],
+                "payment_required": True,
+                "error": f"Error checking payment status: {str(e)}"
+            }
+
 
 if __name__ == "__main__":
     import uvicorn

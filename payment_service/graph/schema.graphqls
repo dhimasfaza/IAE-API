@@ -1,0 +1,19 @@
+type Query {
+  healthCheck: String!
+}
+
+type PaymentResponse {
+  orderId: String!
+  bookId: String!
+  customerId: String!
+  token: String!
+  redirect_url: String!
+}
+
+type Mutation {
+  createPayment(
+    amount: Int!
+    bookId: String!
+    customerId: String!
+  ): PaymentResponse!
+}

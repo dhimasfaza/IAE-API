@@ -13,7 +13,7 @@ services:
     depends_on:
       - book_service
       - user_service
-
+      - payment_service
 
   review_service:
     build: ./review_service
@@ -29,4 +29,7 @@ services:
 
   payment_service:
     build: ./payment_service
-    ports: ["5005:5005"]
+    ports:
+      - "9210:9210"
+    env_file:
+      - ./payment_service/.env
