@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ALPHA LIBRARY - Sistem Manajemen Perpustakaan</title>
+    <!-- Add Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>ALPHA LIBRARY</h1>
+            <p>Sistem Manajemen Perpustakaan Digital</p>
+            <div class="stats-grid" id="statsGrid">
+                <div class="stat-card">
+                    <div class="stat-number" id="totalBooks">0</div>
+                    <div class="stat-label">Total Buku</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="totalMembers">0</div>
+                    <div class="stat-label">Total Anggota</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="activeBorrowings">0</div>
+                    <div class="stat-label">Peminjaman Aktif</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="totalReviews">0</div>
+                    <div class="stat-label">Total Review</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <div class="nav-tabs">
+            <button class="nav-tab active" onclick="showSection('members')">👥 Anggota</button>
+            <button class="nav-tab" onclick="showSection('books')">📚 Buku</button>
+            <button class="nav-tab" onclick="showSection('borrowings')">📖 Peminjaman</button>
+            <button class="nav-tab" onclick="showSection('reviews')">⭐ Review</button>
+            <button class="nav-tab" onclick="showSection('reports')">📊 Laporan</button>
+        </div>
+
+        <!-- Members Section -->
+        <div id="members" class="content-section active">
+            <h2>📥 Manajemen Anggota</h2>
+            
+            <div class="grid">
+                <div class="card">
+                    <h3>Daftar Anggota Baru</h3>
+                    <form id="registerForm">
+                        <div class="form-group">
+                            <label>Nama Lengkap</label>
+                            <input type="text" id="memberName" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Nomor Telepon</label>
+                            <input type="tel" id="memberPhone" required>
+                        </div>
+                        <button type="submit" class="btn">Daftar Anggota</button>
+                    </form>
+                </div>
+                
+                <div class="card">
+                    <h3>Update Anggota</h3>
+                    <form id="updateMemberForm">
+                        <div class="form-group">
+                            <label>Pilih Anggota</label>
+                            <select id="selectMember" required>
+                                <option value="">Pilih anggota...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Nama Baru</label>
+                            <input type="text" id="updateName">
+                        </div>
+                        <div class="form-group">
+                            <label>Telepon Baru</label>
+                            <input type="tel" id="updatePhone">
+                        </div>
+                        <button type="submit" class="btn btn-secondary">Update Anggota</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table id="membersTable" class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nama</th>
+                            <th>Telepon</th>
+                            <th>Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <!-- Detail Anggota Section -->
+            <div id="memberDetailsSection" class="details-section" style="display: none;">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Detail Anggota</h3>
+                        <button class="btn btn-close" onclick="closeDetails()">×</button>
+                    </div>
+                    <div class="card-body" id="memberDetailsContent"></div>
+                </div>
+            </div>
+
+            <!-- Riwayat Peminjaman Section -->
+            <div id="memberBorrowingsSection" class="details-section" style="display: none;">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Riwayat Peminjaman</h3>
+                        <button class="btn btn-close" onclick="closeBorrowings()">×</button>
+                    </div>
+                    <div class="card-body">
+                        <div id="memberBorrowingsContent"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Books Section - Fixed Table -->
+        <div id="books" class="content-section">
+            <h2>📚 Manajemen Buku</h2>
+            
+            <div class="grid">
+                <div class="card">
+                    <h3>Tambah Buku Baru</h3>
+                    <form id="addBookForm">
+                        <div class="form-group">
+                            <label for="bookTitle">Judul Buku <span class="text-danger">*</span></label>
+                            <input type="text" id="bookTitle" name="bookTitle" required 
+                                placeholder="Masukkan judul buku" maxlength="255">
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="bookAuthor">Penulis</label>
+                                <input type="text" id="bookAuthor" name="bookAuthor" 
+                                    placeholder="Masukkan nama penulis" maxlength="255">
+                            </div>
+                            <div class="form-group">
+                                <label for="bookYear">Tahun</label>
+                                <input type="number" id="bookYear" name="bookYear" 
+                                    min="1000" max="2024" placeholder="2024">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="bookStock">Jumlah Stok <span class="text-danger">*</span></label>
+                            <input type="number" id="bookStock" name="bookStock" 
+                                min="1" max="9999" value="1" required>
+                        </div>
+                        <button type="submit" class="btn">
+                            <i class="fas fa-plus"></i> Tambah Buku
+                        </button>
+                    </form>
+                </div>
+                
+                <div class="card">
+                    <h3>Update Stok Buku</h3>
+                    <form id="updateStockForm">
+                        <div class="form-group">
+                            <label for="selectBook">Pilih Buku <span class="text-danger">*</span></label>
+                            <select id="selectBook" name="selectBook" required>
+                                <option value="">Pilih buku...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="newStock">Stok Baru <span class="text-danger">*</span></label>
+                            <input type="number" id="newStock" name="newStock" 
+                                min="0" max="9999" required placeholder="Masukkan jumlah stok baru">
+                        </div>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-edit"></i> Update Stok
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <h3>Daftar Buku</h3>
+                <div class="table-responsive">
+                    <table id="booksTable" class="table table-striped table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>ID</th>
+                                <th>Judul</th>
+                                <th>Penulis</th>
+                                <th>Tahun</th>
+                                <th>Stok</th>
+                                <th>Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="6" class="text-center">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    <div>Memuat data buku...</div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Borrowings Section -->
+        <div id="borrowings" class="content-section">
+            <h2>📖 Manajemen Peminjaman</h2>
+            
+            <div class="grid">
+                <div class="card">
+                    <h3>Pinjam Buku</h3>
+                    <form id="borrowForm">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Anggota</label>
+                                <select id="borrowMember" required>
+                                    <option value="">Pilih anggota...</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Buku</label>
+                                <select id="borrowBook" required>
+                                    <option value="">Pilih buku...</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Tanggal Peminjaman</label>
+                            <input type="date" id="borrowDate" required>
+                        </div>
+                        <button type="submit" class="btn">Pinjam Buku</button>
+                    </form>
+                </div>
+                
+                <div class="card">
+                    <h3>Kembalikan Buku</h3>
+                    <form id="returnForm">
+                        <div class="form-group">
+                            <label>Pilih Peminjaman Aktif</label>
+                            <select id="activeBorrowings" required>
+                                <option value="">Pilih peminjaman...</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-secondary">Kembalikan Buku</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table id="borrowingsTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Anggota</th>
+                            <th>Buku</th>
+                            <th>Tgl Pinjam</th>
+                            <th>Jatuh Tempo</th>
+                            <th>Status</th>
+                            <th>Denda</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Reviews Section -->
+        <div id="reviews" class="content-section">
+            <h2>⭐ Manajemen Review</h2>
+            
+            <div class="grid">
+                <div class="card">
+                    <h3>Tambah Review</h3>
+                    <form id="reviewForm">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Anggota</label>
+                                <select id="reviewMember" required>
+                                    <option value="">Pilih anggota...</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Buku</label>
+                                <select id="reviewBook" required>
+                                    <option value="">Pilih buku...</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Rating</label>
+                            <div class="rating" id="ratingStars">
+                                <span class="star" data-rating="1">★</span>
+                                <span class="star" data-rating="2">★</span>
+                                <span class="star" data-rating="3">★</span>
+                                <span class="star" data-rating="4">★</span>
+                                <span class="star" data-rating="5">★</span>
+                            </div>
+                            <input type="hidden" id="reviewRating" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label>Komentar</label>
+                            <textarea id="reviewComment" rows="4" placeholder="Tulis review Anda..."></textarea>
+                        </div>
+                        <button type="submit" class="btn">Tambah Review</button>
+                    </form>
+                </div>
+                
+                <div class="card">
+                    <h3>Filter Review</h3>
+                    <div class="form-group">
+                        <label>Filter berdasarkan Buku</label>
+                        <select id="filterReviewBook">
+                            <option value="">Semua buku</option>
+                        </select>
+                    </div>
+                    <button onclick="loadReviews()" class="btn btn-success">Filter Review</button>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table id="reviewsTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Anggota</th>
+                            <th>Buku</th>
+                            <th>Rating</th>
+                            <th>Komentar</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Reports Section -->
+        <div id="reports" class="content-section">
+            <h2>📊 Laporan dan Statistik</h2>
+            
+            <div class="grid">
+                <div class="card">
+                    <h3>📈 Buku Terpopuler</h3>
+                    <div class="table-container">
+                        <table id="topBooksTable">
+                            <thead>
+                                <tr>
+                                    <th>Ranking</th>
+                                    <th>Judul Buku</th>
+                                    <th>Total Peminjaman</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <h3>📋 Ringkasan Sistem</h3>
+                    <div id="systemSummary"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alert Container -->
+        <div id="alertContainer" class="position-fixed top-0 end-0 p-3" style="z-index: 1050"></div>
+    </div>
+
+    <!-- Scripts -->
+    <!-- Add Bootstrap JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/main.js"></script>
+    <script src="js/members.js"></script>
+    <script src="js/books.js"></script>
+    <script src="js/borrowings.js"></script>
+    <script src="js/reviews.js"></script>
+    <script src="js/reports.js"></script>
+</body>
+</html> 

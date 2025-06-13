@@ -1,0 +1,15 @@
+type Query {
+  members: [Member]
+  books: [Book]
+}
+type Member {
+  id: ID!
+  name: String!
+  phone_number: String
+}
+type Book {
+  id: ID!
+  title: String!
+  author: String
+  year: Int
+}

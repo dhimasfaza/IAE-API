@@ -1,0 +1,20 @@
+type Review {
+  id: ID!
+  member_id: ID!
+  book_id: ID!
+  rating: Int!
+  comment: String
+}
+
+type Query {
+  reviews(bookId: ID): [Review!]!
+}
+
+type Mutation {
+  addReview(memberId: ID!, bookId: ID!, rating: Int!, comment: String): Review!
+}
+
+schema {
+  query: Query
+  mutation: Mutation
+}

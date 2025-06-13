@@ -1,0 +1,32 @@
+services:
+  user_service:
+    build: ./user_service
+    ports: ["5000:5000"]
+
+  book_service:
+    build: ./book_service
+    ports: ["5001:5001"]
+
+  borrowing_service:
+    build: ./borrowing_service
+    ports: ["5002:5002"]
+    depends_on:
+      - book_service
+      - user_service
+
+
+  review_service:
+    build: ./review_service
+    ports: ["5003:5003"]
+
+  graphql_gateway:
+    build: ./graphql_gateway
+    ports: ["4000:4000"]
+
+  auth_service:
+    build: ./auth_service
+    ports: ["5004:5004"]
+
+  payment_service:
+    build: ./payment_service
+    ports: ["5005:5005"]
